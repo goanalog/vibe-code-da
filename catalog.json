@@ -1,0 +1,88 @@
+{
+  "id": "vibe-code-landing-zone",
+  "version": "0.1.0",
+  "displayName": "Vibe Code Landing Zone",
+  "description": "Deploy a paste-or-upload single-page app to IBM Cloud Object Storage with one click. Built for vibe coding.",
+  "type": "deployable_architecture",
+  "deliveryMethod": "terraform",
+  "tags": [
+    "ibm-cloud",
+    "deployable-architecture",
+    "object-storage",
+    "static-website",
+    "cos",
+    "vibe-coding",
+    "html"
+  ],
+  "variables": [
+    {
+      "name": "resource_group",
+      "type": "string",
+      "description": "Where your vibe lives organizationally. If unsure, 'default' is fine.",
+      "default": "default",
+      "ui_hints": {
+        "group": "Setup",
+        "label": "Resource Group",
+        "control": "resource-group"
+      },
+      "required": false
+    },
+    {
+      "name": "region",
+      "type": "string",
+      "description": "IBM Cloud region for your Object Storage bucket. 'us-south' is a steady classic.",
+      "default": "us-south",
+      "ui_hints": {
+        "group": "Setup",
+        "label": "Region",
+        "control": "region"
+      },
+      "required": false
+    },
+    {
+      "name": "cos_instance_name",
+      "type": "string",
+      "description": "Optional: name for your IBM Cloud Object Storage instance. Leave blank to auto-generate.",
+      "default": "",
+      "ui_hints": {
+        "group": "Setup",
+        "label": "COS Instance Name (optional)"
+      },
+      "required": false
+    },
+    {
+      "name": "bucket_name",
+      "type": "string",
+      "description": "Optional: bucket name (lowercase, no spaces). Leave blank to auto-generate.",
+      "default": "",
+      "ui_hints": {
+        "group": "Setup",
+        "label": "Bucket Name (optional)"
+      },
+      "required": false
+    },
+    {
+      "name": "index_html",
+      "type": "string",
+      "description": "Paste your full HTML here — it becomes your app’s index.html when deployed. Leave blank to use the sample app.",
+      "ui_hints": {
+        "group": "App Content",
+        "label": "App HTML",
+        "control": "textarea",
+        "placeholder": "<!DOCTYPE html>\\n<html>\\n  <head>...</head>\\n  <body>...</body>\\n</html>"
+      },
+      "required": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "vibe_url",
+      "description": "Your live deployed vibe URL.",
+      "key_output": true
+    },
+    {
+      "name": "vibe_bucket_url",
+      "description": "Direct link to your bucket (listing URL)."
+    }
+  ]
+}
