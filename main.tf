@@ -18,7 +18,6 @@ locals {
   bucket_name = "vibe-site-${random_id.suffix.hex}"
 }
 
-# Bucket for static hosting (no website{} block - provider no longer supports it)
 resource "ibm_cos_bucket" "site" {
   bucket_name          = local.bucket_name
   resource_instance_id = ibm_resource_instance.cos.id
@@ -27,31 +26,20 @@ resource "ibm_cos_bucket" "site" {
   force_delete         = true
 }
 
-# Public Access Group lookup
-data "ibm_iam_access_group" "public" {
-  name = "Public Access Group"
-}
+# Public read access (Object Reader equivalent)
+resource "ibm_iam_authorization_policy" "allow_public_read" {
+  source_service_name = "cloud-object-storage"
+  target_service_name = "cloud-object-storage"
 
-# IAM policy: Public Group -> Object Reader on this bucket
-resource "ibm_iam_policy" "public_reader" {
   roles = ["Object Reader"]
 
-  resources {
-    attributes {
-      name  = "resource"
-      value = "bucket"
-    }
-    attributes {
-      name  = "resourceName"
-      value = local.bucket_name
-    }
+  source_resource {
+    resource_type = "bucket"
+    resource      = local.bucket_name
   }
 
-  subjects {
-    attributes {
-      name  = "iam_id"
-      value = data.ibm_iam_access_group.public.id
-    }
+  target_resource {
+    service_type = "service"
   }
 
   depends_on = [ibm_resource_instance.cos]
@@ -65,7 +53,7 @@ resource "ibm_cos_bucket_object" "index" {
   content_type  = "text/html"
   content       = file("${path.module}/../web/index.html")
   force_destroy = true
-  depends_on    = [ibm_iam_policy.public_reader]
+  depends_on    = [ibm_iam_authorization_policy.allow_public_read]
 }
 
 resource "ibm_cos_bucket_object" "app" {
@@ -75,10 +63,9 @@ resource "ibm_cos_bucket_object" "app" {
   content_type  = "text/html"
   content       = file("${path.module}/../web/app.html")
   force_destroy = true
-  depends_on    = [ibm_iam_policy.public_reader]
+  depends_on    = [ibm_iam_authorization_policy.allow_public_read]
 }
 
-# Upload config JSON with deep links for UI
 locals {
   website_url        = "https://${ibm_cos_bucket.site.bucket_name}.s3-web.${var.bucket_region}.cloud-object-storage.appdomain.cloud/index.html"
   website_app_url    = "https://${ibm_cos_bucket.site.bucket_name}.s3-web.${var.bucket_region}.cloud-object-storage.appdomain.cloud/app.html"
@@ -97,10 +84,9 @@ resource "ibm_cos_bucket_object" "config" {
   content_type  = "application/json"
   content       = local.vibe_config_json
   force_destroy = true
-  depends_on    = [ibm_iam_policy.public_reader]
+  depends_on    = [ibm_iam_authorization_policy.allow_public_read]
 }
 
-# Outputs
 output "vibe_ide_url" {
   description = "Open the Vibe IDE UI"
   value       = local.website_url
