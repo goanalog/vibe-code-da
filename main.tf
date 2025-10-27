@@ -26,27 +26,21 @@ resource "ibm_cos_bucket" "site" {
   force_delete         = true
 }
 
-# Upload IDE files – mark objects publicly readable
+# Upload IDE and sample app (public by COS default website hosting)
 resource "ibm_cos_bucket_object" "index" {
-  bucket_crn       = ibm_cos_bucket.site.crn
-  bucket_region    = var.bucket_region
-  key              = "index.html"
-  content_type     = "text/html"
-  content          = file("${path.module}/../web/index.html")
-  force_destroy    = true
-  etag_match       = ""
-  acl              = "public-read"
+  bucket_crn     = ibm_cos_bucket.site.crn
+  bucket_location = var.bucket_region
+  object_key     = "index.html"
+  content        = file("${path.module}/web/index.html")
+  depends_on     = [ibm_cos_bucket.site]
 }
 
 resource "ibm_cos_bucket_object" "app" {
-  bucket_crn       = ibm_cos_bucket.site.crn
-  bucket_region    = var.bucket_region
-  key              = "app.html"
-  content_type     = "text/html"
-  content          = file("${path.module}/../web/app.html")
-  force_destroy    = true
-  etag_match       = ""
-  acl              = "public-read"
+  bucket_crn     = ibm_cos_bucket.site.crn
+  bucket_location = var.bucket_region
+  object_key     = "app.html"
+  content        = file("${path.module}/web/app.html")
+  depends_on     = [ibm_cos_bucket.site]
 }
 
 locals {
@@ -61,14 +55,11 @@ locals {
 }
 
 resource "ibm_cos_bucket_object" "config" {
-  bucket_crn       = ibm_cos_bucket.site.crn
-  bucket_region    = var.bucket_region
-  key              = "vibe-config.json"
-  content_type     = "application/json"
-  content          = local.vibe_config_json
-  force_destroy    = true
-  etag_match       = ""
-  acl              = "public-read"
+  bucket_crn     = ibm_cos_bucket.site.crn
+  bucket_location = var.bucket_region
+  object_key     = "vibe-config.json"
+  content        = local.vibe_config_json
+  depends_on     = [ibm_cos_bucket.site]
 }
 
 output "vibe_ide_url" {
