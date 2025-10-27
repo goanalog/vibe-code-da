@@ -26,44 +26,27 @@ resource "ibm_cos_bucket" "site" {
   force_delete         = true
 }
 
-# Public read access (Object Reader equivalent)
-resource "ibm_iam_authorization_policy" "allow_public_read" {
-  source_service_name = "cloud-object-storage"
-  target_service_name = "cloud-object-storage"
-
-  roles = ["Object Reader"]
-
-  source_resource {
-    resource_type = "bucket"
-    resource      = local.bucket_name
-  }
-
-  target_resource {
-    service_type = "service"
-  }
-
-  depends_on = [ibm_resource_instance.cos]
-}
-
-# Upload IDE and sample app
+# Upload IDE files – mark objects publicly readable
 resource "ibm_cos_bucket_object" "index" {
-  bucket_crn    = ibm_cos_bucket.site.crn
-  bucket_region = var.bucket_region
-  key           = "index.html"
-  content_type  = "text/html"
-  content       = file("${path.module}/../web/index.html")
-  force_destroy = true
-  depends_on    = [ibm_iam_authorization_policy.allow_public_read]
+  bucket_crn       = ibm_cos_bucket.site.crn
+  bucket_region    = var.bucket_region
+  key              = "index.html"
+  content_type     = "text/html"
+  content          = file("${path.module}/../web/index.html")
+  force_destroy    = true
+  etag_match       = ""
+  acl              = "public-read"
 }
 
 resource "ibm_cos_bucket_object" "app" {
-  bucket_crn    = ibm_cos_bucket.site.crn
-  bucket_region = var.bucket_region
-  key           = "app.html"
-  content_type  = "text/html"
-  content       = file("${path.module}/../web/app.html")
-  force_destroy = true
-  depends_on    = [ibm_iam_authorization_policy.allow_public_read]
+  bucket_crn       = ibm_cos_bucket.site.crn
+  bucket_region    = var.bucket_region
+  key              = "app.html"
+  content_type     = "text/html"
+  content          = file("${path.module}/../web/app.html")
+  force_destroy    = true
+  etag_match       = ""
+  acl              = "public-read"
 }
 
 locals {
@@ -78,26 +61,24 @@ locals {
 }
 
 resource "ibm_cos_bucket_object" "config" {
-  bucket_crn    = ibm_cos_bucket.site.crn
-  bucket_region = var.bucket_region
-  key           = "vibe-config.json"
-  content_type  = "application/json"
-  content       = local.vibe_config_json
-  force_destroy = true
-  depends_on    = [ibm_iam_authorization_policy.allow_public_read]
+  bucket_crn       = ibm_cos_bucket.site.crn
+  bucket_region    = var.bucket_region
+  key              = "vibe-config.json"
+  content_type     = "application/json"
+  content          = local.vibe_config_json
+  force_destroy    = true
+  etag_match       = ""
+  acl              = "public-read"
 }
 
 output "vibe_ide_url" {
-  description = "Open the Vibe IDE UI"
-  value       = local.website_url
+  value = local.website_url
 }
 
 output "live_app_url" {
-  description = "Public URL to the live sample app (app.html)"
-  value       = local.website_app_url
+  value = local.website_app_url
 }
 
 output "bucket_console_url" {
-  description = "Open the bucket in IBM Cloud console"
-  value       = local.bucket_console_url
+  value = local.bucket_console_url
 }
