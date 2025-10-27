@@ -44,4 +44,5 @@ variable "ibmcloud_api_key" {
   type        = string
   description = "IBM Cloud API key with permission to write to ICR and manage resources in the target Resource Group."
   sensitive   = true
+  default     = null
 }
