@@ -11,23 +11,6 @@ terraform {
   }
 }
 
-# Resource group ID provided automatically by IBM Cloud Catalog / Projects
-variable "resource_group_id" {
-  type        = string
-  description = "Resource group ID automatically passed by the deployer"
-}
-
-variable "bucket_region" {
-  type        = string
-  description = "Region for bucket deployment"
-  default     = "us-south"
-}
-
-variable "cos_plan" {
-  type        = string
-  default     = "lite"
-}
-
 resource "random_id" "suffix" {
   byte_length = 3
 }
@@ -52,7 +35,6 @@ resource "ibm_cos_bucket" "site" {
   force_delete         = true
 }
 
-# Upload Vibe IDE UI to index.html
 resource "ibm_cos_bucket_object" "index" {
   bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region
@@ -61,7 +43,6 @@ resource "ibm_cos_bucket_object" "index" {
   depends_on      = [ibm_cos_bucket.site]
 }
 
-# Upload sample user app
 resource "ibm_cos_bucket_object" "app" {
   bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region
@@ -81,7 +62,6 @@ locals {
   })
 }
 
-# Upload dynamic config for the editor to discover deployment context
 resource "ibm_cos_bucket_object" "config" {
   bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region

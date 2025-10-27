@@ -1,23 +1,16 @@
-variable "resource_group" {
-  description = "IBM Cloud Resource Group name"
+variable "resource_group_id" {
+  description = "Resource Group ID provided by IBM Cloud"
   type        = string
-  default     = "default"
-}
-
-variable "region" {
-  description = "Control-plane region for IBM provider calls"
-  type        = string
-  default     = "us-south"
 }
 
 variable "bucket_region" {
-  description = "Region for the COS bucket (website hosting). Example: us-south"
+  description = "Region where the bucket will be created"
   type        = string
   default     = "us-south"
 }
 
 variable "cos_plan" {
-  description = "COS plan for the service instance"
+  description = "COS service plan"
   type        = string
   default     = "lite"
 }
