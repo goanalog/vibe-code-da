@@ -18,31 +18,43 @@ locals {
   bucket_name = "vibe-site-${random_id.suffix.hex}"
 }
 
+# Bucket for static hosting (no website{} block - provider no longer supports it)
 resource "ibm_cos_bucket" "site" {
   bucket_name          = local.bucket_name
   resource_instance_id = ibm_resource_instance.cos.id
   region_location      = var.bucket_region
   storage_class        = "standard"
   force_delete         = true
-
-  website {
-    index_document = "index.html"
-    error_document = "index.html"
-  }
 }
 
-resource "ibm_cos_bucket_policy" "public_read" {
-  bucket_crn = ibm_cos_bucket.site.crn
-  policy     = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Sid       = "PublicReadGetObject",
-      Effect    = "Allow",
-      Principal = "*",
-      Action    = ["s3:GetObject"],
-      Resource  = "arn:aws:s3:::${ibm_cos_bucket.site.bucket_name}/*"
-    }]
-  })
+# Public Access Group lookup
+data "ibm_iam_access_group" "public" {
+  name = "Public Access Group"
+}
+
+# IAM policy: Public Group -> Object Reader on this bucket
+resource "ibm_iam_policy" "public_reader" {
+  roles = ["Object Reader"]
+
+  resources {
+    attributes {
+      name  = "resource"
+      value = "bucket"
+    }
+    attributes {
+      name  = "resourceName"
+      value = local.bucket_name
+    }
+  }
+
+  subjects {
+    attributes {
+      name  = "iam_id"
+      value = data.ibm_iam_access_group.public.id
+    }
+  }
+
+  depends_on = [ibm_resource_instance.cos]
 }
 
 # Upload IDE and sample app
@@ -53,7 +65,7 @@ resource "ibm_cos_bucket_object" "index" {
   content_type  = "text/html"
   content       = file("${path.module}/../web/index.html")
   force_destroy = true
-  depends_on    = [ibm_cos_bucket_policy.public_read]
+  depends_on    = [ibm_iam_policy.public_reader]
 }
 
 resource "ibm_cos_bucket_object" "app" {
@@ -63,15 +75,19 @@ resource "ibm_cos_bucket_object" "app" {
   content_type  = "text/html"
   content       = file("${path.module}/../web/app.html")
   force_destroy = true
-  depends_on    = [ibm_cos_bucket_policy.public_read]
+  depends_on    = [ibm_iam_policy.public_reader]
 }
 
-# Upload config JSON with dynamic links (consumed by IDE UI)
+# Upload config JSON with deep links for UI
 locals {
   website_url        = "https://${ibm_cos_bucket.site.bucket_name}.s3-web.${var.bucket_region}.cloud-object-storage.appdomain.cloud/index.html"
   website_app_url    = "https://${ibm_cos_bucket.site.bucket_name}.s3-web.${var.bucket_region}.cloud-object-storage.appdomain.cloud/app.html"
   bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets?bucket=${ibm_cos_bucket.site.bucket_name}&region=${var.bucket_region}"
-  vibe_config_json   = jsonencode({ website_url = local.website_app_url, bucket_console_url = local.bucket_console_url })
+
+  vibe_config_json = jsonencode({
+    website_url        = local.website_app_url
+    bucket_console_url = local.bucket_console_url
+  })
 }
 
 resource "ibm_cos_bucket_object" "config" {
@@ -81,9 +97,10 @@ resource "ibm_cos_bucket_object" "config" {
   content_type  = "application/json"
   content       = local.vibe_config_json
   force_destroy = true
-  depends_on    = [ibm_cos_bucket_policy.public_read]
+  depends_on    = [ibm_iam_policy.public_reader]
 }
 
+# Outputs
 output "vibe_ide_url" {
   description = "Open the Vibe IDE UI"
   value       = local.website_url
