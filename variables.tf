@@ -1,12 +1,12 @@
 variable "resource_group_id" {
-  description = "Resource Group ID provided automatically by IBM Cloud Schematics"
+  description = "Resource Group ID (Schematics/Projects will inject this automatically). If blank, falls back to the 'Default' resource group."
   type        = string
-  nullable    = false
   default     = ""
+  nullable    = false
 }
 
 variable "bucket_region" {
-  description = "Region where the bucket will be created"
+  description = "Region for the bucket (e.g., us-south, us-east, eu-de, eu-gb, etc.)"
   type        = string
   default     = "us-south"
   validation {
@@ -21,6 +21,6 @@ variable "cos_plan" {
   default     = "lite"
   validation {
     condition     = var.cos_plan == "lite" || var.cos_plan == "standard"
-    error_message = "Only lite or standard allowed."
+    error_message = "Only lite or standard are allowed."
   }
 }
