@@ -1,0 +1,23 @@
+# Catalog-friendly: no external downloads. COS-only helper app.
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install Python deps first for layer caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app
+COPY ./templates ./templates
+COPY app.py .
+
+# Expose Code Engine runtime port
+EXPOSE 8080
+
+# Environment provided by CE via Terraform
+ENV COS_BUCKET=""
+ENV REGION=""
+ENV COS_ACCESS_KEY_ID=""
+ENV COS_SECRET_ACCESS_KEY=""
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "8", "--timeout", "0", "app:app"]
