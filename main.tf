@@ -1,5 +1,31 @@
-data "ibm_resource_group" "rg" {
-  name = var.resource_group
+terraform {
+  required_providers {
+    ibm = {
+      source  = "ibm-cloud/ibm"
+      version = ">= 1.60.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.5.0"
+    }
+  }
+}
+
+# Resource group ID provided automatically by IBM Cloud Catalog / Projects
+variable "resource_group_id" {
+  type        = string
+  description = "Resource group ID automatically passed by the deployer"
+}
+
+variable "bucket_region" {
+  type        = string
+  description = "Region for bucket deployment"
+  default     = "us-south"
+}
+
+variable "cos_plan" {
+  type        = string
+  default     = "lite"
 }
 
 resource "random_id" "suffix" {
@@ -11,7 +37,7 @@ resource "ibm_resource_instance" "cos" {
   service           = "cloud-object-storage"
   plan              = var.cos_plan
   location          = "global"
-  resource_group_id = data.ibm_resource_group.rg.id
+  resource_group_id = var.resource_group_id
 }
 
 locals {
@@ -26,7 +52,7 @@ resource "ibm_cos_bucket" "site" {
   force_delete         = true
 }
 
-# Upload IDE UI
+# Upload Vibe IDE UI to index.html
 resource "ibm_cos_bucket_object" "index" {
   bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region
@@ -35,7 +61,7 @@ resource "ibm_cos_bucket_object" "index" {
   depends_on      = [ibm_cos_bucket.site]
 }
 
-# Upload user-facing sample app
+# Upload sample user app
 resource "ibm_cos_bucket_object" "app" {
   bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region
@@ -50,11 +76,12 @@ locals {
   bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets?bucket=${ibm_cos_bucket.site.bucket_name}&region=${var.bucket_region}"
 
   vibe_config_json = jsonencode({
-    website_url        = local.website_app_url
     bucket_console_url = local.bucket_console_url
+    website_url        = local.website_app_url
   })
 }
 
+# Upload dynamic config for the editor to discover deployment context
 resource "ibm_cos_bucket_object" "config" {
   bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region
