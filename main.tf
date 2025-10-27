@@ -37,7 +37,7 @@ resource "random_string" "suffix" {
 
 resource "ibm_cos_bucket" "cos_bucket" {
   bucket_name          = "${var.prefix}-${random_string.suffix.result}"
-  resource_crn         = ibm_resource_instance.cos.id
+  resource_instance_id = ibm_resource_instance.cos.id
   single_site_location = var.region
   storage_class        = "standard"
   force_delete         = true
@@ -70,7 +70,6 @@ resource "ibm_code_engine_project" "ce" {
   name              = var.code_engine_project_name
   region            = var.region
   resource_group_id = data.ibm_resource_group.rg.id
-  tags              = ["idlake", "da", "base"]
 }
 
 locals {
@@ -101,8 +100,7 @@ locals {
 }
 
 resource "ibm_cr_namespace" "ns" {
-  name   = var.icr_namespace
-  region = local.icr_region_code
+  name = var.icr_namespace
 }
 
 resource "ibm_code_engine_secret" "registry" {
@@ -132,7 +130,7 @@ resource "ibm_code_engine_build" "helper_app" {
   depends_on = [ibm_code_engine_project.ce, ibm_cr_namespace.ns]
 }
 
-resource "ibm_code_engine_configmap" "cfg" {
+resource "ibm_code_engine_config_map" "cfg" {
   project_id = ibm_code_engine_project.ce.id
   name       = "${var.helper_app_name}-cfg"
   data = {
@@ -162,8 +160,8 @@ resource "ibm_code_engine_app" "helper_app" {
   max_scale = 2
 
   run_env_variables = [
-    { type = "config_map", name = ibm_code_engine_configmap.cfg.name, key = "COS_BUCKET", value = "COS_BUCKET" },
-    { type = "config_map", name = ibm_code_engine_configmap.cfg.name, key = "REGION",     value = "REGION"     },
+    { type = "config_map", name = ibm_code_engine_config_map.cfg.name, key = "COS_BUCKET", value = "COS_BUCKET" },
+    { type = "config_map", name = ibm_code_engine_config_map.cfg.name, key = "REGION",     value = "REGION"     },
     { type = "secret",     name = ibm_code_engine_secret.cos_secret.name, key = "COS_ACCESS_KEY_ID",     value = "COS_ACCESS_KEY_ID" },
     { type = "secret",     name = ibm_code_engine_secret.cos_secret.name, key = "COS_SECRET_ACCESS_KEY", value = "COS_SECRET_ACCESS_KEY" }
   ]
