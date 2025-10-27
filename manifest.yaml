@@ -1,0 +1,30 @@
+
+kind: deployableArchitecture
+metadata:
+  name: vibe-ide-da
+  version: 1.0.2
+spec:
+  type: terraform
+  inputs:
+    - name: region
+      type: string
+      default: us-south
+      description: IBM provider region (not COS instance)
+    - name: cos_plan
+      type: string
+      default: lite
+      description: COS plan; defaults to lite (per 1A)
+    - name: bucket_region
+      type: string
+      default: us-south
+      description: Region for the COS bucket
+    - name: bucket_storage_class
+      type: string
+      default: smart
+      description: COS storage class
+    - name: initial_html
+      type: string
+      description: Optional initial HTML to publish as index.html
+  outputs:
+    - name: primary_output
+      description: Public Website URL for Vibe IDE

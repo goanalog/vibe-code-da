@@ -1,0 +1,16 @@
+
+{
+  "name": "vibe-ide-da",
+  "version": "1.0.2",
+  "label": "Vibe IDE — Live Static Site (Lite)",
+  "description": "Deploy a Vibe IDE static site to IBM Cloud Object Storage with website hosting enabled. Uses your provided HTML or the bundled sample. Outputs a public URL.",
+  "tags": ["vibe", "ibm-cloud", "cos", "static-site", "vibe-ide", "serverless"],
+  "type": "terraform",
+  "product_kind": "solution",
+  "provider": "IBM",
+  "metadata": {
+    "long_description": "Provision IBM Cloud Object Storage (Lite) with a regional bucket configured for website hosting and publish index.html. Use Catalog input HTML or the packaged sample.",
+    "architectures": ["x86_64"],
+    "operating_systems": ["linux", "mac", "windows"]
+  }
+}
