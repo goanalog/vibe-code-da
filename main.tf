@@ -1,8 +1,10 @@
 terraform {
+  required_version = ">= 1.0.0"
+
   required_providers {
     ibm = {
       source  = "ibm-cloud/ibm"
-      version = ">= 1.60.0"
+      version = ">= 1.84.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -11,73 +13,92 @@ terraform {
   }
 }
 
+provider "ibm" {}
+
+# -------------------------------------------------------------------
+# Resource Group Detection: Schematics may inject var.resource_group_id.
+# If not provided, fallback to the "Default" resource group by name.
+# -------------------------------------------------------------------
+data "ibm_resource_group" "fallback" {
+  name = "Default"
+}
+
+locals {
+  resolved_rg = var.resource_group_id != "" ? var.resource_group_id : data.ibm_resource_group.fallback.id
+}
+
+# Random suffix for global bucket naming uniqueness
 resource "random_id" "suffix" {
   byte_length = 3
 }
 
+# -------------------------------------------------------------------
+# COS Instance (Lite plan, global region)
+# -------------------------------------------------------------------
 resource "ibm_resource_instance" "cos" {
-  name              = "vibe-cos-${random_id.suffix.hex}"
-  service           = "cloud-object-storage"
-  plan              = var.cos_plan
-  location          = "global"
-  resource_group_id = var.resource_group_id
+  name     = "vibe-cos-${random_id.suffix.hex}"
+  service  = "cloud-object-storage"
+  plan     = var.cos_plan
+  location = "global"
+  resource_group_id = local.resolved_rg
 }
 
-locals {
-  bucket_name = "vibe-site-${random_id.suffix.hex}"
-}
-
-resource "ibm_cos_bucket" "site" {
-  bucket_name          = local.bucket_name
+# -------------------------------------------------------------------
+# COS Bucket
+# Valid bucket regions include: us-south/us-east/eu-gb/eu-de/ap-...
+# Lite instance supports *regional* buckets
+# -------------------------------------------------------------------
+resource "ibm_cos_bucket" "vibe_bucket" {
+  bucket_name          = "vibe-bucket-${random_id.suffix.hex}"
   resource_instance_id = ibm_resource_instance.cos.id
   region_location      = var.bucket_region
   storage_class        = "standard"
-  force_delete         = true
+
+  # Enable static website
+  website {
+    index_document = "index.html"
+    error_document = "index.html"
+  }
 }
 
+# -------------------------------------------------------------------
+# Upload Web Files (index + app + config)
+# key attribute is REQUIRED for v1.84.x provider
+# -------------------------------------------------------------------
+
 resource "ibm_cos_bucket_object" "index" {
-  bucket_crn      = ibm_cos_bucket.site.crn
-  bucket_location = var.bucket_region
-  key             = "index.html"
-  content         = file("${path.module}/web/index.html")
-  depends_on      = [ibm_cos_bucket.site]
+  bucket             = ibm_cos_bucket.vibe_bucket.bucket_name
+  key                = "index.html"
+  content            = file("${path.module}/web/index.html")
+  content_type       = "text/html"
 }
 
 resource "ibm_cos_bucket_object" "app" {
-  bucket_crn      = ibm_cos_bucket.site.crn
-  bucket_location = var.bucket_region
-  key             = "app.html"
-  content         = file("${path.module}/web/app.html")
-  depends_on      = [ibm_cos_bucket.site]
-}
-
-locals {
-  website_url        = "https://${ibm_cos_bucket.site.bucket_name}.s3-web.${var.bucket_region}.cloud-object-storage.appdomain.cloud/index.html"
-  website_app_url    = "https://${ibm_cos_bucket.site.bucket_name}.s3-web.${var.bucket_region}.cloud-object-storage.appdomain.cloud/app.html"
-  bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets?bucket=${ibm_cos_bucket.site.bucket_name}&region=${var.bucket_region}"
-
-  vibe_config_json = jsonencode({
-    bucket_console_url = local.bucket_console_url
-    website_url        = local.website_app_url
-  })
+  bucket             = ibm_cos_bucket.vibe_bucket.bucket_name
+  key                = "app.html"
+  content            = file("${path.module}/web/app.html")
+  content_type       = "text/html"
 }
 
 resource "ibm_cos_bucket_object" "config" {
-  bucket_crn      = ibm_cos_bucket.site.crn
-  bucket_location = var.bucket_region
-  key             = "vibe-config.json"
-  content         = local.vibe_config_json
-  depends_on      = [ibm_cos_bucket.site]
+  bucket             = ibm_cos_bucket.vibe_bucket.bucket_name
+  key                = "vibe-config.json"
+  content            = file("${path.module}/web/vibe-config.json")
+  content_type       = "application/json"
 }
 
-output "vibe_ide_url" {
-  value = local.website_url
+# -------------------------------------------------------------------
+# Outputs
+# -------------------------------------------------------------------
+
+output "bucket_name" {
+  value = ibm_cos_bucket.vibe_bucket.bucket_name
 }
 
-output "live_app_url" {
-  value = local.website_app_url
+output "static_website_url" {
+  value = "https://${ibm_cos_bucket.vibe_bucket.bucket_name}.s3.${var.bucket_region}.cloud-object-storage.appdomain.cloud"
 }
 
-output "bucket_console_url" {
-  value = local.bucket_console_url
+output "cos_instance_name" {
+  value = ibm_resource_instance.cos.name
 }
