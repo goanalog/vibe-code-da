@@ -1,0 +1,9 @@
+schema_version: "1.0.0"
+name: vibe-ide-da
+display_name: "Vibe IDE — Zero-Config Creative Hosting"
+description: "Deploys a live-editable static site using IBM Cloud Object Storage and the Vibe IDE front-end. The IDE is never overwritten; users update app.html."
+type: terraform
+runtime: terraform
+primary_artifact:
+  builtin:
+    path: terraform

@@ -1,0 +1,22 @@
+{
+  "name": "vibe-ide-da",
+  "label": "Vibe IDE \u2014 Zero-Config Creative Hosting",
+  "version": "1.0.0",
+  "description": "Create and live-edit a static website hosted on IBM Cloud Object Storage. Users deploy instantly, then paste/edit HTML using the built-in Vibe IDE and publish updates to the live app.html site.",
+  "tags": [
+    "static-site",
+    "cos",
+    "editor",
+    "no-code",
+    "vibe",
+    "web"
+  ],
+  "type": "terraform",
+  "product_kind": "solution",
+  "provider": "IBM",
+  "media": {
+    "icon": "icons/tile.png",
+    "icon_light": "icons/icon-light.png",
+    "icon_dark": "icons/icon-dark.png"
+  }
+}

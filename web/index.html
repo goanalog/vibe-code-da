@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vibe IDE — Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#0b0c0e; --fg:#e5e7eb; --muted:#9ca3af; --card:#121317; --accent:#10b981; }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,sans-serif}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px}
+    h1{font-size:22px;margin:0 0 12px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .card{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+    textarea{width:100%;height:480px;background:#0a0b0d;color:var(--fg);border:1px solid #1f2937;border-radius:12px;padding:12px;font-family:"IBM Plex Mono",monospace;font-size:13px;line-height:1.4;resize:vertical}
+    iframe{width:100%;height:480px;background:white;border:1px solid #1f2937;border-radius:12px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    button{background:var(--accent);color:#072016;border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+    .ghost{background:transparent;color:var(--fg);border:1px solid #374151}
+    .muted{color:var(--muted);font-size:12px}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:#111827;border:1px solid #1f2937;border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+    a{color:#93c5fd}
+    .links{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 12px}
+    code{background:#0b0c0e;border:1px solid #1f2937;border-radius:6px;padding:2px 6px}
+    /* Guide overlay */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
+    .guide{background:var(--card);border:1px solid #374151;border-radius:16px;padding:20px;max-width:560px}
+    .guide h3{margin:0 0 8px}
+    .guide ol{margin:0 0 8px 18px;line-height:1.5}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>Vibe IDE — Edit <code>app.html</code> (viewer on right)</h1>
+      <div class="pill" id="env-pill">loading…</div>
+    </div>
+
+    <div class="links">
+      <a id="open-live" class="ghost" href="app.html" target="_blank">Open Live app.html</a>
+      <a id="open-bucket" class="ghost" href="#" target="_blank">Open Bucket in IBM Cloud</a>
+      <button id="guideBtn" class="ghost">Publish Guide</button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong>Editor</strong>
+          <span class="muted">Edits apply to <code>app.html</code>. The IDE (<code>index.html</code>) is never overwritten.</span>
+        </div>
+        <textarea id="editor" placeholder="Loading app.html…"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="previewBtn">Preview</button>
+          <button class="ghost" id="downloadBtn">Download app.html</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong>Viewer</strong>
+          <span class="muted">Preview updates before publishing.</span>
+        </div>
+        <iframe id="viewer" src="app.html" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:12px">
+      Publish: upload the downloaded <code>app.html</code> into your bucket (replacing the existing file). The site updates immediately.
+    </p>
+  </div>
+
+  <!-- Publish Guide Overlay -->
+  <div class="overlay" id="overlay">
+    <div class="guide">
+      <h3>Publish Guide — Replace <code>app.html</code></h3>
+      <ol>
+        <li>Click <b>Download app.html</b> and save the file.</li>
+        <li>Click <b>Open Bucket</b> to open the IBM Cloud console.</li>
+        <li>Upload the file and overwrite <code>app.html</code> in your bucket.</li>
+        <li>Open <b>Live app.html</b> to verify your changes.</li>
+      </ol>
+      <div class="row">
+        <button id="closeGuide">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const editor = document.getElementById('editor');
+    const iframe = document.getElementById('viewer');
+    const dlBtn = document.getElementById('downloadBtn');
+    const previewBtn = document.getElementById('previewBtn');
+    const envPill = document.getElementById('env-pill');
+    const openBucket = document.getElementById('open-bucket');
+    const guideBtn = document.getElementById('guideBtn');
+    const overlay = document.getElementById('overlay');
+    const closeGuide = document.getElementById('closeGuide');
+
+    // Load app.html into the editor
+    fetch('app.html', {cache:'no-store'}).then(r => r.text()).then(t => {
+      editor.value = t;
+    }).catch(() => {
+      editor.value = '<!-- Could not load app.html. Paste your HTML here and publish as app.html. -->';
+    });
+
+    // Load vibe-config.json if present to populate console link and environment pill
+    fetch('vibe-config.json', {cache:'no-store'}).then(r => r.ok ? r.json() : null).then(cfg => {
+      if (cfg && cfg.bucket_console_url) {
+        openBucket.href = cfg.bucket_console_url;
+      } else {
+        openBucket.style.display = 'none';
+      }
+      if (cfg && cfg.website_url) {
+        try { envPill.textContent = new URL(cfg.website_url).host; } catch(e) { envPill.textContent = 'COS website ready'; }
+      } else {
+        envPill.textContent = 'COS website ready';
+      }
+    }).catch(() => {
+      envPill.textContent = 'COS website ready';
+      openBucket.style.display = 'none';
+    });
+
+    // Preview -> load the edited HTML in the iframe via blob URL
+    previewBtn.addEventListener('click', () => {
+      const blob = new Blob([editor.value], {type: 'text/html'});
+      const url = URL.createObjectURL(blob);
+      iframe.src = url;
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    });
+
+    // Download app.html
+    dlBtn.addEventListener('click', () => {
+      const blob = new Blob([editor.value], {type: 'text/html'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'app.html';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 1000);
+    });
+
+    // Publish Guide
+    guideBtn.addEventListener('click', () => overlay.style.display = 'flex');
+    closeGuide.addEventListener('click', () => overlay.style.display = 'none');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
+  </script>
+</body>
+</html>
