@@ -26,21 +26,22 @@ resource "ibm_cos_bucket" "site" {
   force_delete         = true
 }
 
-# Upload IDE and sample app (public by COS default website hosting)
+# Upload IDE UI
 resource "ibm_cos_bucket_object" "index" {
-  bucket_crn     = ibm_cos_bucket.site.crn
+  bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region
-  object_key     = "index.html"
-  content        = file("${path.module}/web/index.html")
-  depends_on     = [ibm_cos_bucket.site]
+  key             = "index.html"
+  content         = file("${path.module}/web/index.html")
+  depends_on      = [ibm_cos_bucket.site]
 }
 
+# Upload user-facing sample app
 resource "ibm_cos_bucket_object" "app" {
-  bucket_crn     = ibm_cos_bucket.site.crn
+  bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region
-  object_key     = "app.html"
-  content        = file("${path.module}/web/app.html")
-  depends_on     = [ibm_cos_bucket.site]
+  key             = "app.html"
+  content         = file("${path.module}/web/app.html")
+  depends_on      = [ibm_cos_bucket.site]
 }
 
 locals {
@@ -55,11 +56,11 @@ locals {
 }
 
 resource "ibm_cos_bucket_object" "config" {
-  bucket_crn     = ibm_cos_bucket.site.crn
+  bucket_crn      = ibm_cos_bucket.site.crn
   bucket_location = var.bucket_region
-  object_key     = "vibe-config.json"
-  content        = local.vibe_config_json
-  depends_on     = [ibm_cos_bucket.site]
+  key             = "vibe-config.json"
+  content         = local.vibe_config_json
+  depends_on      = [ibm_cos_bucket.site]
 }
 
 output "vibe_ide_url" {
