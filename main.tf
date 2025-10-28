@@ -48,8 +48,8 @@ resource "ibm_iam_access_group_policy" "bucket_public_reader" {
 
   resources {
     service = "cloud-object-storage"
-    # TROUBLESHOOTING: Remove resource_instance_id, target bucket by name only.
-    # resource_instance_id = ibm_resource_instance.cos.id
+    # REVERT: Add resource_instance_id back, as it seems required by the API.
+    resource_instance_id = ibm_resource_instance.cos.id
     # Scoping policy to the specific bucket
     resource_type = "bucket"
     resource      = ibm_cos_bucket.vibe_bucket.bucket_name
