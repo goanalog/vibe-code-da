@@ -38,20 +38,20 @@ resource "ibm_cos_bucket" "vibe_bucket" {
 # REMOVED: ibm_cos_bucket_public_access (not supported by this provider)
 # resource "ibm_cos_bucket_public_access" "public_access" { ... }
 
-# ADDED BACK: The IAM policy. This is the only public access method
-# that did not cause a 'plan' or 'apply' error.
+# ADDED BACK: The IAM policy, which we know can be created.
 resource "ibm_iam_access_group_policy" "bucket_public_reader" {
   # Use the well-known static ID for the Public Access group
   access_group_id = "AccessGroupId-PublicAccess"
-  roles           = ["Object Reader"]
+  
+  # FIX: Use "Content Reader" role instead of "Object Reader"
+  roles           = ["Content Reader"]
 
   resources {
-    service = "cloud-object-storage"
-    # FIX: Apply policy to the entire COS instance, not just the bucket.
-    # This is a broader, but more reliable, permission.
+    service              = "cloud-object-storage"
     resource_instance_id = ibm_resource_instance.cos.id
-    # REMOVED: resource_type = "bucket"
-    # REMOVED: resource = ibm_cos_bucket.vibe_bucket.bucket_name
+    # Re-scoping to the bucket, which we know works.
+    resource_type        = "bucket"
+    resource             = ibm_cos_bucket.vibe_bucket.bucket_name
   }
 }
 
