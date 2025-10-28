@@ -59,6 +59,7 @@ resource "ibm_cos_bucket_object" "index" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "index.html"
+  acl           = "public-read" # Set object ACL to public
   # Reverted from 'source' to 'content' for compatibility with older provider
   content = file("${path.module}/web/index.html")
   # content_type removed - provider will auto-detect
@@ -68,6 +69,7 @@ resource "ibm_cos_bucket_object" "app" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "app.html"
+  acl           = "public-read" # Set object ACL to public
   # Reverted from 'source' to 'content' for compatibility with older provider
   content = file("${path.module}/web/app.html")
   # content_type removed - provider will auto-detect
@@ -92,6 +94,7 @@ resource "ibm_cos_bucket_object" "config" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "vibe-config.json"
+  acl           = "public-read" # Set object ACL to public
   content       = local.vibe_config_json # Keep content here as it's generated
   # content_type removed - provider will auto-detect
 }
