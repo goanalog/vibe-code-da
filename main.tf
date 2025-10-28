@@ -82,18 +82,18 @@ resource "ibm_cos_bucket_object" "app" {
 locals {
   bucket_name = ibm_cos_bucket.vibe_bucket.bucket_name
 
-  # TROUBLESHOOTING: Switch back to the s3.public endpoint format.
-  # The IAM policy might be specifically tied to this endpoint type.
-  s3_public_base = "https://${local.bucket_name}.s3.public.${var.bucket_region}.cloud-object-storage.appdomain.cloud"
-  s3_index_url   = "${local.s3_public_base}/index.html"
-  s3_app_url     = "${local.s3_public_base}/app.html"
+  # TROUBLESHOOTING: Switch back AGAIN to the standard S3 endpoint format.
+  # Maybe the IAM policy works best with this one.
+  s3_standard_base = "https://s3.${var.bucket_region}.cloud-object-storage.appdomain.cloud/${local.bucket_name}"
+  s3_index_url     = "${local.s3_standard_base}/index.html"
+  s3_app_url       = "${local.s3_standard_base}/app.html"
 
   # FIX: Update console URL to use the URL-encoded COS instance CRN.
   bucket_console_url = "https://cloud.ibm.com/objectstorage/${urlencode(ibm_resource_instance.cos.crn)}"
 
   vibe_config_json = jsonencode({
     bucket_console_url = local.bucket_console_url
-    website_url        = local.s3_app_url # Point config to the public S3 URL
+    website_url        = local.s3_app_url # Point config to the standard S3 URL
   })
 }
 
@@ -112,13 +112,13 @@ output "bucket_name" {
 }
 
 output "vibe_ide_url" {
-  description = "Vibe IDE (index.html) via public S3 endpoint"
-  value       = local.s3_index_url # Updated to public S3 URL
+  description = "Vibe IDE (index.html) via standard S3 endpoint"
+  value       = local.s3_index_url # Updated to standard S3 URL
 }
 
 output "live_app_url" {
-  description = "Sample app (app.html) via public S3 endpoint"
-  value       = local.s3_app_url # Updated to public S3 URL
+  description = "Sample app (app.html) via standard S3 endpoint"
+  value       = local.s3_app_url # Updated to standard S3 URL
 }
 
 output "bucket_console_url" {
