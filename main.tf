@@ -43,13 +43,13 @@ resource "ibm_iam_access_group_policy" "bucket_public_reader" {
   # Use the well-known static ID for the Public Access group
   access_group_id = "AccessGroupId-PublicAccess"
 
-  # FIX: Try "Object Reader" again, but scoped to the bucket.
-  roles = ["Object Reader"]
+  # FIX: Apply BOTH Content Reader and Object Reader roles
+  roles = ["Content Reader", "Object Reader"]
 
   resources {
     service              = "cloud-object-storage"
     resource_instance_id = ibm_resource_instance.cos.id
-    # Re-scoping to the bucket, which we know works.
+    # Scoping policy to the specific bucket
     resource_type        = "bucket"
     resource             = ibm_cos_bucket.vibe_bucket.bucket_name
   }
