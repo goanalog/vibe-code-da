@@ -43,8 +43,8 @@ resource "ibm_iam_access_group_policy" "bucket_public_reader" {
   # Use the well-known static ID for the Public Access group
   access_group_id = "AccessGroupId-PublicAccess"
 
-  # FIX: Apply BOTH Content Reader and Object Reader roles
-  roles = ["Content Reader", "Object Reader"]
+  # FIX: Set roles to just Content Reader
+  roles = ["Content Reader"]
 
   resources {
     service              = "cloud-object-storage"
