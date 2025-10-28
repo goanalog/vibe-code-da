@@ -39,19 +39,19 @@ resource "ibm_cos_bucket" "vibe_bucket" {
 # Upload IDE (index), sample app (app), and config (JSON)
 # Use the CRN + bucket_location form (works across provider variants)
 resource "ibm_cos_bucket_object" "index" {
-  bucket_crn      = ibm_cos_bucket.vibe_bucket.crn
+  bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
-  key             = "index.html"
-  content         = file("${path.module}/web/index.html")
-  content_type    = "text/html"
+  key           = "index.html"
+  content       = file("${path.module}/web/index.html")
+  # content_type removed - provider will auto-detect
 }
 
 resource "ibm_cos_bucket_object" "app" {
-  bucket_crn      = ibm_cos_bucket.vibe_bucket.crn
+  bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
-  key             = "app.html"
-  content         = file("${path.module}/web/app.html")
-  content_type    = "text/html"
+  key           = "app.html"
+  content       = file("${path.module}/web/app.html")
+  # content_type removed - provider will auto-detect
 }
 
 # Minimal config JSON the IDE can fetch for links/back-refs
@@ -70,11 +70,11 @@ locals {
 }
 
 resource "ibm_cos_bucket_object" "config" {
-  bucket_crn      = ibm_cos_bucket.vibe_bucket.crn
+  bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
-  key             = "vibe-config.json"
-  content         = local.vibe_config_json
-  content_type    = "application/json"
+  key           = "vibe-config.json"
+  content       = local.vibe_config_json
+  # content_type removed - provider will auto-detect
 }
 
 # Outputs
