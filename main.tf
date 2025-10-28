@@ -59,7 +59,7 @@ resource "ibm_cos_bucket_object" "index" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "index.html"
-  acl           = "public-read" # Set object ACL to public
+  # acl = "public-read" # Removed: Not supported by this provider version
   # Reverted from 'source' to 'content' for compatibility with older provider
   content = file("${path.module}/web/index.html")
   # content_type removed - provider will auto-detect
@@ -69,7 +69,7 @@ resource "ibm_cos_bucket_object" "app" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "app.html"
-  acl           = "public-read" # Set object ACL to public
+  # acl = "public-read" # Removed: Not supported by this provider version
   # Reverted from 'source' to 'content' for compatibility with older provider
   content = file("${path.module}/web/app.html")
   # content_type removed - provider will auto-detect
@@ -77,16 +77,17 @@ resource "ibm_cos_bucket_object" "app" {
 
 # Minimal config JSON the IDE can fetch for links/back-refs
 locals {
-  bucket_name        = ibm_cos_bucket.vibe_bucket.bucket_name
-  # You asked for the "website" endpoint style:
-  website_base       = "https://${local.bucket_name}.website.${var.bucket_region}.cloud-object-storage.appdomain.cloud"
-  website_index_url  = "${local.website_base}/index.html"
-  website_app_url    = "${local.website_base}/app.html"
+  bucket_name = ibm_cos_bucket.vibe_bucket.bucket_name
+  # FIX: Change from "website" endpoint to the "public S3" endpoint.
+  # This endpoint works with the public IAM policy.
+  s3_public_base     = "https://${local.bucket_name}.s3.public.${var.bucket_region}.cloud-object-storage.appdomain.cloud"
+  s3_index_url       = "${local.s3_public_base}/index.html"
+  s3_app_url         = "${local.s3_public_base}/app.html"
   bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets?bucket=${local.bucket_name}&region=${var.bucket_region}"
 
   vibe_config_json = jsonencode({
     bucket_console_url = local.bucket_console_url
-    website_url        = local.website_app_url
+    website_url        = local.s3_app_url # Point config to the new S3 URL
   })
 }
 
@@ -94,7 +95,7 @@ resource "ibm_cos_bucket_object" "config" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "vibe-config.json"
-  acl           = "public-read" # Set object ACL to public
+  # acl = "public-read" # Removed: Not supported by this provider version
   content       = local.vibe_config_json # Keep content here as it's generated
   # content_type removed - provider will auto-detect
 }
@@ -105,13 +106,13 @@ output "bucket_name" {
 }
 
 output "vibe_ide_url" {
-  description = "Vibe IDE (index.html) via website endpoint"
-  value       = local.website_index_url
+  description = "Vibe IDE (index.html) via public S3 endpoint"
+  value       = local.s3_index_url # Updated to new S3 URL
 }
 
 output "live_app_url" {
-  description = "Sample app (app.html) via website endpoint"
-  value       = local.website_app_url
+  description = "Sample app (app.html) via public S3 endpoint"
+  value       = local.s3_app_url # Updated to new S3 URL
 }
 
 output "bucket_console_url" {
