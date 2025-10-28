@@ -31,11 +31,26 @@ resource "ibm_cos_bucket" "vibe_bucket" {
   resource_instance_id = ibm_resource_instance.cos.id
   region_location      = var.bucket_region
   storage_class        = "standard"
-  public_access        = true # Enable public access for website
+  # public_access and website block removed, as they are not supported
+  # and will be replaced by an IAM policy.
+}
 
-  # Configure for static website hosting
-  website {
-    index_document = "index.html"
+# Data source to find the well-known "Public Access" group
+data "ibm_iam_access_group" "public_access_group" {
+  name = "Public Access"
+}
+
+# Grant "Object Reader" role to the "Public Access" group for our new bucket
+# This is the "IBM way" of enabling public access for a static website
+resource "ibm_iam_access_group_policy" "bucket_public_reader" {
+  access_group_id = data.ibm_iam_access_group.public_access_group.id
+  roles           = ["Object Reader"]
+
+  resources {
+    service              = "cloud-object-storage"
+    resource_instance_id = ibm_resource_instance.cos.id
+    resource_type        = "bucket"
+    resource             = ibm_cos_bucket.vibe_bucket.bucket_name
   }
 }
 
