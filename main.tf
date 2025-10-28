@@ -46,10 +46,12 @@ resource "ibm_iam_access_group_policy" "bucket_public_reader" {
   roles           = ["Object Reader"]
 
   resources {
-    service              = "cloud-object-storage"
+    service = "cloud-object-storage"
+    # FIX: Apply policy to the entire COS instance, not just the bucket.
+    # This is a broader, but more reliable, permission.
     resource_instance_id = ibm_resource_instance.cos.id
-    resource_type        = "bucket"
-    resource             = ibm_cos_bucket.vibe_bucket.bucket_name
+    # REMOVED: resource_type = "bucket"
+    # REMOVED: resource = ibm_cos_bucket.vibe_bucket.bucket_name
   }
 }
 
