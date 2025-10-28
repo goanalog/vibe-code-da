@@ -32,25 +32,17 @@ resource "ibm_cos_bucket" "vibe_bucket" {
   region_location      = var.bucket_region
   storage_class        = "standard"
   # public_access and website block removed, as they are not supported
-  # and will be replaced by an IAM policy.
+  # and will be replaced by a dedicated resource.
 }
 
-# Data source block for "public_access_group" removed as it's not supported by this provider version.
-# We will use the static ID "AccessGroupId-PublicAccess" instead.
+# REMOVED the ibm_iam_access_group_policy
+# resource "ibm_iam_access_group_policy" "bucket_public_reader" { ... }
 
-# Grant "Object Reader" role to the "Public Access" group for our new bucket
-# This is the "IBM way" of enabling public access for a static website
-resource "ibm_iam_access_group_policy" "bucket_public_reader" {
-  # Use the well-known static ID for the Public Access group
-  access_group_id = "AccessGroupId-PublicAccess"
-  roles           = ["Object Reader"]
-
-  resources {
-    service              = "cloud-object-storage"
-    resource_instance_id = ibm_resource_instance.cos.id
-    resource_type        = "bucket"
-    resource             = ibm_cos_bucket.vibe_bucket.bucket_name
-  }
+# ADDED a dedicated resource for setting bucket public access
+resource "ibm_cos_bucket_public_access" "public_access" {
+  bucket_crn      = ibm_cos_bucket.vibe_bucket.crn
+  bucket_location = var.bucket_region
+  public_access   = "reader" # Set public access to "reader"
 }
 
 # Upload IDE (index), sample app (app), and config (JSON)
@@ -78,11 +70,13 @@ resource "ibm_cos_bucket_object" "app" {
 # Minimal config JSON the IDE can fetch for links/back-refs
 locals {
   bucket_name = ibm_cos_bucket.vibe_bucket.bucket_name
-  # FIX: Change from "website" endpoint to the "public S3" endpoint.
-  # This endpoint works with the public IAM policy.
-  s3_public_base     = "https://${local.bucket_name}.s3.public.${var.bucket_region}.cloud-object-storage.appdomain.cloud"
-  s3_index_url       = "${local.s3_public_base}/index.html"
-  s3_app_url         = "${local.s3_public_base}/app.html"
+
+  # FIX: The "bucket.s3.public..." URL format resulted in NXDOMAIN.
+  # Reverting to the standard S3-compatible endpoint format: s3.{region}.../{bucket}/{key}
+  # This endpoint *will* resolve, and the 'ibm_cos_bucket_public_access' resource will make it readable.
+  s3_standard_base   = "https://s3.${var.bucket_region}.cloud-object-storage.appdomain.cloud/${local.bucket_name}"
+  s3_index_url       = "${local.s3_standard_base}/index.html"
+  s3_app_url         = "${local.s3_standard_base}/app.html"
   bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets?bucket=${local.bucket_name}&region=${var.bucket_region}"
 
   vibe_config_json = jsonencode({
