@@ -31,9 +31,12 @@ resource "ibm_cos_bucket" "vibe_bucket" {
   resource_instance_id = ibm_resource_instance.cos.id
   region_location      = var.bucket_region
   storage_class        = "standard"
+  public_access        = true # Enable public access for website
 
-  # NOTE: Do not use a `website {}` block — provider in Schematics often flags it.
-  # We will publish via the website endpoint URLs directly in outputs.
+  # Configure for static website hosting
+  website {
+    index_document = "index.html"
+  }
 }
 
 # Upload IDE (index), sample app (app), and config (JSON)
@@ -42,7 +45,7 @@ resource "ibm_cos_bucket_object" "index" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "index.html"
-  content       = file("${path.module}/web/index.html")
+  source        = "${path.module}/web/index.html" # Use source for better update handling
   # content_type removed - provider will auto-detect
 }
 
@@ -50,7 +53,7 @@ resource "ibm_cos_bucket_object" "app" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "app.html"
-  content       = file("${path.module}/web/app.html")
+  source        = "${path.module}/web/app.html" # Use source for better update handling
   # content_type removed - provider will auto-detect
 }
 
@@ -73,7 +76,7 @@ resource "ibm_cos_bucket_object" "config" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "vibe-config.json"
-  content       = local.vibe_config_json
+  content       = local.vibe_config_json # Keep content here as it's generated
   # content_type removed - provider will auto-detect
 }
 
@@ -95,3 +98,4 @@ output "live_app_url" {
 output "bucket_console_url" {
   value = local.bucket_console_url
 }
+
