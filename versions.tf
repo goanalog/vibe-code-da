@@ -4,7 +4,8 @@ terraform {
   required_providers {
     ibm = {
       source  = "ibm-cloud/ibm"
-      version = ">= 1.84.3"
+      # Require a newer provider version known to support ibm_cos_bucket_public_access
+      version = "~> 1.57"
     }
     random = {
       source  = "hashicorp/random"
