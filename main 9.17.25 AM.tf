@@ -1,0 +1,97 @@
+provider "ibm" {}
+
+# Resolve resource group:
+# - Use injected var.resource_group_id when present
+# - Otherwise, fall back to the account's "Default" resource group by name
+data "ibm_resource_group" "fallback" {
+  name = "Default"
+}
+
+locals {
+  resolved_rg = var.resource_group_id != "" ? var.resource_group_id : data.ibm_resource_group.fallback.id
+}
+
+# Short random suffix for uniqueness (global bucket namespace)
+resource "random_id" "suffix" {
+  byte_length = 3
+}
+
+# COS instance (global)
+resource "ibm_resource_instance" "cos" {
+  name              = "vibe-cos-${random_id.suffix.hex}"
+  service           = "cloud-object-storage"
+  plan              = var.cos_plan
+  location          = "global"
+  resource_group_id = local.resolved_rg
+}
+
+# Bucket (regional)
+resource "ibm_cos_bucket" "vibe_bucket" {
+  bucket_name          = "vibe-bucket-${random_id.suffix.hex}"
+  resource_instance_id = ibm_resource_instance.cos.id
+  region_location      = var.bucket_region
+  storage_class        = "standard"
+
+  # NOTE: Do not use a `website {}` block — provider in Schematics often flags it.
+  # We will publish via the website endpoint URLs directly in outputs.
+}
+
+# Upload IDE (index), sample app (app), and config (JSON)
+# Use the CRN + bucket_location form (works across provider variants)
+resource "ibm_cos_bucket_object" "index" {
+  bucket_crn      = ibm_cos_bucket.vibe_bucket.crn
+  bucket_location = var.bucket_region
+  key             = "index.html"
+  content         = file("${path.module}/web/index.html")
+  content_type    = "text/html"
+}
+
+resource "ibm_cos_bucket_object" "app" {
+  bucket_crn      = ibm_cos_bucket.vibe_bucket.crn
+  bucket_location = var.bucket_region
+  key             = "app.html"
+  content         = file("${path.module}/web/app.html")
+  content_type    = "text/html"
+}
+
+# Minimal config JSON the IDE can fetch for links/back-refs
+locals {
+  bucket_name        = ibm_cos_bucket.vibe_bucket.bucket_name
+  # You asked for the "website" endpoint style:
+  website_base       = "https://${local.bucket_name}.website.${var.bucket_region}.cloud-object-storage.appdomain.cloud"
+  website_index_url  = "${local.website_base}/index.html"
+  website_app_url    = "${local.website_base}/app.html"
+  bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets?bucket=${local.bucket_name}&region=${var.bucket_region}"
+
+  vibe_config_json = jsonencode({
+    bucket_console_url = local.bucket_console_url
+    website_url        = local.website_app_url
+  })
+}
+
+resource "ibm_cos_bucket_object" "config" {
+  bucket_crn      = ibm_cos_bucket.vibe_bucket.crn
+  bucket_location = var.bucket_region
+  key             = "vibe-config.json"
+  content         = local.vibe_config_json
+  content_type    = "application/json"
+}
+
+# Outputs
+output "bucket_name" {
+  value = local.bucket_name
+}
+
+output "vibe_ide_url" {
+  description = "Vibe IDE (index.html) via website endpoint"
+  value       = local.website_index_url
+}
+
+output "live_app_url" {
+  description = "Sample app (app.html) via website endpoint"
+  value       = local.website_app_url
+}
+
+output "bucket_console_url" {
+  value = local.bucket_console_url
+}
