@@ -35,15 +35,14 @@ resource "ibm_cos_bucket" "vibe_bucket" {
   # and will be replaced by an IAM policy.
 }
 
-# Data source to find the well-known "Public Access" group
-data "ibm_iam_access_group" "public_access_group" {
-  name = "Public Access"
-}
+# Data source block for "public_access_group" removed as it's not supported by this provider version.
+# We will use the static ID "AccessGroupId-PublicAccess" instead.
 
 # Grant "Object Reader" role to the "Public Access" group for our new bucket
 # This is the "IBM way" of enabling public access for a static website
 resource "ibm_iam_access_group_policy" "bucket_public_reader" {
-  access_group_id = data.ibm_iam_access_group.public_access_group.id
+  # Use the well-known static ID for the Public Access group
+  access_group_id = "AccessGroupId-PublicAccess"
   roles           = ["Object Reader"]
 
   resources {
@@ -60,7 +59,8 @@ resource "ibm_cos_bucket_object" "index" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "index.html"
-  source        = "${path.module}/web/index.html" # Use source for better update handling
+  # Reverted from 'source' to 'content' for compatibility with older provider
+  content = file("${path.module}/web/index.html")
   # content_type removed - provider will auto-detect
 }
 
@@ -68,7 +68,8 @@ resource "ibm_cos_bucket_object" "app" {
   bucket_crn    = ibm_cos_bucket.vibe_bucket.crn
   bucket_location = var.bucket_region
   key           = "app.html"
-  source        = "${path.module}/web/app.html" # Use source for better update handling
+  # Reverted from 'source' to 'content' for compatibility with older provider
+  content = file("${path.module}/web/app.html")
   # content_type removed - provider will auto-detect
 }
 
