@@ -35,15 +35,24 @@ resource "ibm_cos_bucket" "vibe_bucket" {
   # and will be replaced by a dedicated resource.
 }
 
-# REMOVED the ibm_iam_access_group_policy
-# resource "ibm_iam_access_group_policy" "bucket_public_reader" { ... }
+# REMOVED: ibm_cos_bucket_public_access (not supported by this provider)
+# resource "ibm_cos_bucket_public_access" "public_access" { ... }
 
-# ADDED a dedicated resource for setting bucket public access
-resource "ibm_cos_bucket_public_access" "public_access" {
-  bucket_crn      = ibm_cos_bucket.vibe_bucket.crn
-  bucket_location = var.bucket_region
-  public_access   = "reader" # Set public access to "reader"
+# ADDED BACK: The IAM policy. This is the only public access method
+# that did not cause a 'plan' or 'apply' error.
+resource "ibm_iam_access_group_policy" "bucket_public_reader" {
+  # Use the well-known static ID for the Public Access group
+  access_group_id = "AccessGroupId-PublicAccess"
+  roles           = ["Object Reader"]
+
+  resources {
+    service              = "cloud-object-storage"
+    resource_instance_id = ibm_resource_instance.cos.id
+    resource_type        = "bucket"
+    resource             = ibm_cos_bucket.vibe_bucket.bucket_name
+  }
 }
+
 
 # Upload IDE (index), sample app (app), and config (JSON)
 # Use the CRN + bucket_location form (works across provider variants)
@@ -73,7 +82,7 @@ locals {
 
   # FIX: The "bucket.s3.public..." URL format resulted in NXDOMAIN.
   # Reverting to the standard S3-compatible endpoint format: s3.{region}.../{bucket}/{key}
-  # This endpoint *will* resolve, and the 'ibm_cos_bucket_public_access' resource will make it readable.
+  # This endpoint *will* resolve, and the 'ibm_iam_access_group_policy' resource will make it readable.
   s3_standard_base   = "https://s3.${var.bucket_region}.cloud-object-storage.appdomain.cloud/${local.bucket_name}"
   s3_index_url       = "${local.s3_standard_base}/index.html"
   s3_app_url         = "${local.s3_standard_base}/app.html"
