@@ -85,10 +85,12 @@ locals {
   # FIX: The "bucket.s3.public..." URL format resulted in NXDOMAIN.
   # Reverting to the standard S3-compatible endpoint format: s3.{region}.../{bucket}/{key}
   # This endpoint *will* resolve, and the 'ibm_iam_access_group_policy' resource will make it readable.
-  s3_standard_base   = "https://s3.${var.bucket_region}.cloud-object-storage.appdomain.cloud/${local.bucket_name}"
-  s3_index_url       = "${local.s3_standard_base}/index.html"
-  s3_app_url         = "${local.s3_standard_base}/app.html"
-  bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets?bucket=${local.bucket_name}&region=${var.bucket_region}"
+  s3_standard_base = "https://s3.${var.bucket_region}.cloud-object-storage.appdomain.cloud/${local.bucket_name}"
+  s3_index_url     = "${local.s3_standard_base}/index.html"
+  s3_app_url       = "${local.s3_standard_base}/app.html"
+
+  # FIX: Update console URL to use the URL-encoded COS instance CRN.
+  bucket_console_url = "https://cloud.ibm.com/objectstorage/${urlencode(ibm_resource_instance.cos.crn)}"
 
   vibe_config_json = jsonencode({
     bucket_console_url = local.bucket_console_url
@@ -121,6 +123,7 @@ output "live_app_url" {
 }
 
 output "bucket_console_url" {
-  value = local.bucket_console_url
+  description = "Link to the COS instance in IBM Cloud console" # Updated description
+  value       = local.bucket_console_url                      # Updated to new format
 }
 
