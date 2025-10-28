@@ -43,15 +43,16 @@ resource "ibm_iam_access_group_policy" "bucket_public_reader" {
   # Use the well-known static ID for the Public Access group
   access_group_id = "AccessGroupId-PublicAccess"
 
-  # FIX: Set roles to just Content Reader (based on user screenshot)
+  # FIX: Set roles to just Content Reader (based on user screenshot and working manual policy)
   roles = ["Content Reader"]
 
   resources {
-    service              = "cloud-object-storage"
-    resource_instance_id = ibm_resource_instance.cos.id
+    service = "cloud-object-storage"
+    # TROUBLESHOOTING: Remove resource_instance_id, target bucket by name only.
+    # resource_instance_id = ibm_resource_instance.cos.id
     # Scoping policy to the specific bucket
-    resource_type        = "bucket"
-    resource             = ibm_cos_bucket.vibe_bucket.bucket_name
+    resource_type = "bucket"
+    resource      = ibm_cos_bucket.vibe_bucket.bucket_name
   }
 }
 
@@ -82,8 +83,7 @@ resource "ibm_cos_bucket_object" "app" {
 locals {
   bucket_name = ibm_cos_bucket.vibe_bucket.bucket_name
 
-  # TROUBLESHOOTING: Switch back AGAIN to the standard S3 endpoint format.
-  # Maybe the IAM policy works best with this one.
+  # Keep the standard S3 endpoint format.
   s3_standard_base = "https://s3.${var.bucket_region}.cloud-object-storage.appdomain.cloud/${local.bucket_name}"
   s3_index_url     = "${local.s3_standard_base}/index.html"
   s3_app_url       = "${local.s3_standard_base}/app.html"
