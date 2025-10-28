@@ -30,63 +30,45 @@ resource "ibm_cos_bucket" "vibe" {
   storage_class        = "standard"
 }
 
-# CORS: allow GET/HEAD/PUT for front-end actions
-resource "ibm_cos_bucket_cors" "cors" {
-  bucket = ibm_cos_bucket.vibe.bucket_name
-  rule {
-    allowed_methods = ["GET", "HEAD", "PUT", "OPTIONS"]
+# Configuration (CORS + S3 bucket policy) — supported in provider >=1.84
+resource "ibm_cos_bucket_configuration" "cfg" {
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.region_location
+
+  cors_rule {
     allowed_origins = ["*"]
+    allowed_methods = ["GET", "PUT", "HEAD", "OPTIONS"]
     allowed_headers = ["*"]
     max_age_seconds = 3000
   }
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadAll"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["s3:GetObject"]
+        Resource  = "arn:aws:s3:::${ibm_cos_bucket.vibe.bucket_name}/*"
+      },
+      {
+        Sid       = "PublicPutAppOnly"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["s3:PutObject"]
+        Resource  = "arn:aws:s3:::${ibm_cos_bucket.vibe.bucket_name}/app.html"
+      }
+    ]
+  })
 }
 
-# Public read for website assets
-resource "ibm_iam_policy" "public_reader" {
-  roles = ["Object Reader"]
-
-  resources = [{
-    service           = "cloud-object-storage"
-    resource_instance = ibm_resource_instance.cos.id
-  }]
-
-  subjects = [{
-    type       = "AccessGroup"
-    identifier = "Public Access Group"
-  }]
-}
-
-# A-1 demo: Anonymous write to ONLY app.html via bucket policy (high-trust demo)
-resource "ibm_cos_bucket_policy" "public_put_app_html" {
-  bucket = ibm_cos_bucket.vibe.bucket_name
-  policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "PublicReadVibe",
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": ["s3:GetObject"],
-      "Resource": "arn:aws:s3:::${ibm_cos_bucket.vibe.bucket_name}/*"
-    },
-    {
-      "Sid": "PublicPutAppHtmlOnly",
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": ["s3:PutObject"],
-      "Resource": "arn:aws:s3:::${ibm_cos_bucket.vibe.bucket_name}/app.html"
-    }
-  ]
-}
-POLICY
-}
-
-# Upload IDE (index.html)
+# Upload IDE and content (objects require CRN + location in 1.84)
 resource "ibm_cos_bucket_object" "index" {
-  bucket       = ibm_cos_bucket.vibe.bucket_name
-  key          = "index.html"
-  content      = <<EOT
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.region_location
+  key             = "index.html"
+  content         = <<EOT
 <!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Vibe IDE — Editor</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" /><style>
     :root { --bg:#0b0c0e; --fg:#e5e7eb; --muted:#9ca3af; --card:#121317; --accent:#10b981; }
     *{box-sizing:border-box}
@@ -175,12 +157,10 @@ resource "ibm_cos_bucket_object" "index" {
     closeGuide.addEventListener('click', () => overlay.style.display = 'none');
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
   
-// Manifest (anonymous PUT to COS S3 endpoint for app.html)
 const manifestBtn = document.getElementById('manifestBtn');
 const toast = document.getElementById('toast');
 let s3PutUrl = null;
 
-// Load vibe-config.json to get s3_put_url and website_url
 fetch('vibe-config.json', {cache:'no-store'}).then(r => r.ok ? r.json() : null).then(cfg => {
   if (cfg && cfg.s3_put_url) s3PutUrl = cfg.s3_put_url;
 });
@@ -196,13 +176,8 @@ manifestBtn?.addEventListener('click', async () => {
   try {
     showToast('Publishing…');
     const body = new Blob([editor.value], {type: 'text/html'});
-    const res = await fetch(s3PutUrl, {
-      method: 'PUT',
-      body,
-      // No auth headers in A-1 demo model
-    });
+    const res = await fetch(s3PutUrl, { method: 'PUT', body });
     if (!res.ok) { showToast('Publish failed: ' + res.status); return; }
-    // Give COS a moment to settle, then refresh iframe to live URL (not blob)
     setTimeout(() => {
       iframe.src = 'app.html?ts=' + Date.now();
       showToast('Published!');
@@ -214,14 +189,14 @@ manifestBtn?.addEventListener('click', async () => {
 
 </script><div id="toast" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:10px;padding:10px 14px;display:none;z-index:60">Publishing…</div></body></html>
 EOT
-  content_type = "text/html"
+  content_type    = "text/html"
 }
 
-# Upload default content (app.html)
 resource "ibm_cos_bucket_object" "app" {
-  bucket       = ibm_cos_bucket.vibe.bucket_name
-  key          = "app.html"
-  content      = <<EOT
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.region_location
+  key             = "app.html"
+  content         = <<EOT
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>IBM Plex Animation</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=IBM+Plex+Serif:wght@300;400&display=swap" rel="stylesheet"><style>
         /* * Base setup for a fullscreen, no-scroll experience.
          * We set the background to a dark, IBM-style blue.
@@ -439,25 +414,25 @@ resource "ibm_cos_bucket_object" "app" {
 
     </style></head><body><div class="plex-container"><div class="plex-layer grid-layer"></div><div class="plex-layer h-lines-layer"></div><div class="plex-layer d-lines-layer"></div><div class="plex-layer scanline-layer"></div></div><div class="content"><div class="vibe-ide-title"><h1>Vibe IDE</h1></div><p class="status">SYSTEM STATUS: <span class="online">OPERATIONAL</span><span class="cursor">_</span></p></div></body></html>
 EOT
-  content_type = "text/html"
+  content_type    = "text/html"
 }
 
-# vibe-config.json generated with runtime endpoints
 resource "ibm_cos_bucket_object" "vibe_config" {
-  bucket       = ibm_cos_bucket.vibe.bucket_name
-  key          = "vibe-config.json"
-  content      = jsonencode({
-    website_url       = "https://${ibm_cos_bucket.vibe.bucket_name}.${var.region}.cloud-object-storage.appdomain.cloud"
-    s3_put_url        = "https://s3.${var.region}.cloud-object-storage.appdomain.cloud/${ibm_cos_bucket.vibe.bucket_name}/app.html"
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.region_location
+  key             = "vibe-config.json"
+  content         = jsonencode({
+    website_url        = "https://${ibm_cos_bucket.vibe.bucket_name}.${var.region}.cloud-object-storage.appdomain.cloud"
+    s3_put_url         = "https://s3.${var.region}.cloud-object-storage.appdomain.cloud/${ibm_cos_bucket.vibe.bucket_name}/app.html"
     bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets/${ibm_cos_bucket.vibe.bucket_name}?region=${var.region}"
   })
-  content_type = "application/json"
+  content_type    = "application/json"
 }
 
-# Fallback page
 resource "ibm_cos_bucket_object" "error" {
-  bucket       = ibm_cos_bucket.vibe.bucket_name
-  key          = "404.html"
-  content      = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Not Found</title></head><body style='font-family: IBM Plex Sans, sans-serif; background:#000; color:#e5e7eb; text-align:center; padding-top:20vh;'><h1 style='font-size:3rem;'>404</h1><p>This vibe isn’t manifest yet.</p></body></html>"
-  content_type = "text/html"
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.region_location
+  key             = "404.html"
+  content         = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Not Found</title></head><body style='font-family: IBM Plex Sans, sans-serif; background:#000; color:#e5e7eb; text-align:center; padding-top:20vh;'><h1 style='font-size:3rem;'>404</h1><p>This vibe isn’t manifest yet.</p></body></html>"
+  content_type    = "text/html"
 }
