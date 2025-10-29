@@ -1,6 +1,5 @@
 ###############################################################################
-# Vibe IDE — Outputs (v1.3.2)
-# Centralized outputs for IBM Cloud Catalog and Projects
+# Outputs (v1.3.3)
 ###############################################################################
 
 output "ide_url" {
@@ -22,10 +21,6 @@ output "bucket_console_url" {
   description = "IBM Cloud Console URL to manage this bucket"
   value       = "https://cloud.ibm.com/objectstorage/buckets/${ibm_cos_bucket_public_access.vibe.bucket}?region=${var.region}"
 }
-
-###############################################################################
-# Optional debugging and convenience outputs
-###############################################################################
 
 output "deployment_region" {
   description = "IBM Cloud region used for this deployment"

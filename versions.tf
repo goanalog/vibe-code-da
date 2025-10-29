@@ -1,10 +1,10 @@
-
 terraform {
-  required_version = ">= 1.6.0, < 2.0.0"
+  required_version = ">= 1.2.0, < 2.0.0"
+
   required_providers {
     ibm = {
-      source  = "IBM-Cloud/ibm"
-      version = "~> 1.38.2"
+      source  = "ibm-cloud/ibm"
+      version = ">= 1.84.0"
     }
     random = {
       source  = "hashicorp/random"
