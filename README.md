@@ -1,10 +1,15 @@
-# Vibe IDE — Deployable Architecture (v1.1.2, A-1 demo; provider 1.84 compatible)
 
-- COS Lite instance + unique bucket
-- Public read via S3 bucket policy in `ibm_cos_bucket_configuration`
-- Anonymous PUT permitted only for `app.html` (A-1 demo)
-- CORS enabled (GET/PUT/HEAD/OPTIONS)
-- Uploaded: `index.html` (IDE), `app.html` (default vibe), `vibe-config.json`, `404.html`
-- Output `site_url` launches IDE immediately
+# Vibe IDE — Zero-Input Manifest (v1.3.1)
 
-> Security note: Anyone with the PUT URL could overwrite `app.html`. Prefer a signed-URL broker (Code Engine) for production.
+Per-deployment COS bucket. IDE publishes via Cloudflare Worker using pre-signed PUT for `app.html`. Browser never sees credentials. Zero inputs; Catalog-clean.
+
+## Deploy
+- Import this DA into your Private Catalog or create a Schematics workspace from it.
+- Apply. Outputs include `ide_url` and `app_url`.
+
+## Worker (once)
+- Deploy `broker/` Worker and set secrets: `COS_ACCESS_KEY_ID`, `COS_SECRET_ACCESS_KEY`, `COS_REGION` (e.g., us-south).
+- Endpoint: `/sign`. Request body: `{ "bucket": "<vibe-bucket-...>", "key": "app.html" }`.
+
+## End-user
+- Open IDE → edit → **Manifest** → share `app_url`.

@@ -1,0 +1,15 @@
+schema_version: "1.0.0"
+name: "vibe-ide-da"
+label: "Vibe IDE — Live Static Site Editor"
+description: "Deploy a live-editable HTML IDE that instantly publishes a public static site to IBM Cloud Object Storage using a secure broker. Zero inputs. Free-tier COS Lite."
+version: "1.3.1"
+type: "terraform"
+tags:
+  - developer-tools
+  - static-site
+  - object-storage
+  - no-code
+  - vibe
+products:
+  - name: "IBM Cloud Object Storage"
+    id: "cloud-object-storage"

@@ -1,15 +1,17 @@
 variable "region" {
-  description = "Target region for IBM Cloud resources"
+  description = "COS bucket deployment region"
   type        = string
   default     = "us-south"
 }
 
-variable "project_id" {
+variable "broker_url" {
+  description = "Cloudflare Worker broker endpoint"
   type        = string
-  default     = ""
+  default     = "https://vibe-manifest-broker.brendanandrewfitzpatrick.workers.dev/sign"
 }
 
-variable "config_id" {
-  type        = string
-  default     = ""
+variable "tags" {
+  description = "Tags for associated cloud resources"
+  type        = list(string)
+  default     = ["vibe", "vibe-ide-da"]
 }

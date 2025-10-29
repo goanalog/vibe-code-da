@@ -1,3 +1,4 @@
+
 provider "ibm" {}
 
 data "ibm_resource_group" "default" {
@@ -25,45 +26,10 @@ resource "ibm_resource_instance" "cos" {
 resource "ibm_cos_bucket" "vibe" {
   bucket_name          = local.bucket_name
   resource_instance_id = ibm_resource_instance.cos.id
-  region_location      = var.region
+  region_location      = "us-south"
   storage_class        = "standard"
 }
 
-# Provider 1.84: configuration includes CORS and S3 bucket policy
-resource "ibm_cos_bucket_configuration" "cfg" {
-  bucket_crn      = ibm_cos_bucket.vibe.crn
-  bucket_location = ibm_cos_bucket.vibe.region_location
-
-  cors_rule {
-    allowed_origins = ["*"]
-    allowed_methods = ["GET", "PUT", "HEAD", "OPTIONS"]
-    allowed_headers = ["*"]
-    max_age_seconds = 3000
-  }
-
-  # A-1 demo policy: public read + anonymous PUT only for app.html
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "PublicReadAll"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = ["s3:GetObject"]
-        Resource  = "arn:aws:s3:::${ibm_cos_bucket.vibe.bucket_name}/*"
-      },
-      {
-        Sid       = "PublicPutAppOnly"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = ["s3:PutObject"]
-        Resource  = "arn:aws:s3:::${ibm_cos_bucket.vibe.bucket_name}/app.html"
-      }
-    ]
-  })
-}
-
-# Objects (must use bucket_crn + bucket_location)
 resource "ibm_cos_bucket_object" "index" {
   bucket_crn      = ibm_cos_bucket.vibe.crn
   bucket_location = ibm_cos_bucket.vibe.region_location
@@ -93,7 +59,7 @@ resource "ibm_cos_bucket_object" "index" {
     .guide{background:var(--card);border:1px solid #374151;border-radius:16px;padding:20px;max-width:560px}
     .guide h3{margin:0 0 8px}
     .guide ol{margin:0 0 8px 18px;line-height:1.5}
-  </style></head><body><div class="wrap"><div class="header"><h1>Vibe IDE — Edit <code>app.html</code> (viewer on right)</h1><div class="pill" id="env-pill">loading…</div></div><div class="links"><a id="open-live" class="ghost" href="app.html" target="_blank">Open Live app.html</a><a id="open-bucket" class="ghost" href="#" target="_blank">Open Bucket in IBM Cloud</a><button id="guideBtn" class="ghost" style="display:none">Publish Guide</button></div><div class="grid"><div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>Editor</strong><span class="muted">Edits apply to <code>app.html</code>. The IDE (<code>index.html</code>) is never overwritten.</span></div><textarea id="editor" placeholder="Loading app.html…"></textarea><div class="row" style="margin-top:8px"><button id="previewBtn">Preview</button><button id="manifestBtn">Manifest</button><button class="ghost" id="downloadBtn">Download app.html</button></div></div><div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>Viewer</strong><span class="muted">Preview updates before publishing.</span></div><iframe id="viewer" src="app.html" referrerpolicy="no-referrer"></iframe></div></div><p class="muted" style="margin-top:12px">
+  </style></head><body><div class="wrap"><div class="header"><h1>Vibe IDE — Edit <code>app.html</code> (viewer on right)</h1><div class="pill" id="env-pill">loading…</div></div><div class="links"><a id="open-live" class="ghost" href="app.html" target="_blank">Open Live app.html</a><a id="open-bucket" class="ghost" href="#" target="_blank">Open Bucket in IBM Cloud</a><button id="guideBtn" class="ghost">Publish Guide</button></div><div class="grid"><div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>Editor</strong><span class="muted">Edits apply to <code>app.html</code>. The IDE (<code>index.html</code>) is never overwritten.</span></div><textarea id="editor" placeholder="Loading app.html…"></textarea><div class="row" style="margin-top:8px"><button id="previewBtn">Preview</button><button class="ghost" id="downloadBtn">Download app.html</button></div></div><div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>Viewer</strong><span class="muted">Preview updates before publishing.</span></div><iframe id="viewer" src="app.html" referrerpolicy="no-referrer"></iframe></div></div><p class="muted" style="margin-top:12px">
       Publish: upload the downloaded <code>app.html</code> into your bucket (replacing the existing file). The site updates immediately.
     </p></div><div class="overlay" id="overlay"><div class="guide"><h3>Publish Guide — Replace <code>app.html</code></h3><ol><li>Click <b>Download app.html</b> and save the file.</li><li>Click <b>Open Bucket</b> to open the IBM Cloud console.</li><li>Upload the file and overwrite <code>app.html</code> in your bucket.</li><li>Open <b>Live app.html</b> to verify your changes.</li></ol><div class="row"><button id="closeGuide">Close</button></div></div></div><script>
     const editor = document.getElementById('editor');
@@ -156,40 +122,35 @@ resource "ibm_cos_bucket_object" "index" {
     guideBtn.addEventListener('click', () => overlay.style.display = 'flex');
     closeGuide.addEventListener('click', () => overlay.style.display = 'none');
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
-  
-const manifestBtn = document.getElementById('manifestBtn');
-const toast = document.getElementById('toast');
-let s3PutUrl = null;
-
-fetch('vibe-config.json', {cache:'no-store'}).then(r => r.ok ? r.json() : null).then(cfg => {
-  if (cfg && cfg.s3_put_url) s3PutUrl = cfg.s3_put_url;
-});
-
-function showToast(msg) {
-  toast.textContent = msg;
-  toast.style.display = 'block';
-  setTimeout(() => { toast.style.display = 'none'; }, 2500);
-}
-
-manifestBtn?.addEventListener('click', async () => {
-  if (!s3PutUrl) { showToast('Missing publish endpoint'); return; }
-  try {
-    showToast('Publishing…');
-    const body = new Blob([editor.value], {type: 'text/html'});
-    const res = await fetch(s3PutUrl, { method: 'PUT', body });
-    if (!res.ok) { showToast('Publish failed: ' + res.status); return; }
-    setTimeout(() => {
-      iframe.src = 'app.html?ts=' + Date.now();
-      showToast('Published!');
-    }, 600);
-  } catch (e) {
-    showToast('Error: ' + (e && e.message ? e.message : 'unknown'));
+  </script><div id="toast" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:10px;padding:10px 14px;display:none;z-index:60">Ready.</div><script>
+(function(){
+  const toast = document.getElementById('toast');
+  const editor = document.getElementById('editor') || document.querySelector('textarea');
+  const iframe = document.getElementById('iframe') || document.querySelector('iframe');
+  const btn = document.getElementById('manifestBtn');
+  function showToast(msg){ if(!toast) return; toast.textContent = msg; toast.style.display = 'block'; setTimeout(()=>toast.style.display='none', 2200); }
+  let cfg = null;
+  fetch('vibe-config.json', {cache:'no-store'}).then(r => r.ok ? r.json() : null).then(j => { cfg = j || {}; }).catch(()=>{});
+  async function getSignedPutUrl(bucket) {
+    if (!cfg || !cfg.sign_url) throw new Error('Signer not configured');
+    const res = await fetch(cfg.sign_url, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ bucket: bucket, key:'app.html', expires: 300 }) });
+    if (!res.ok) throw new Error('Signer error ' + res.status);
+    const j = await res.json(); if (!j.url) throw new Error('No URL from signer'); return j.url;
   }
-});
-
-</script><div id="toast" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:10px;padding:10px 14px;display:none;z-index:60">Publishing…</div></body></html>
+  btn && btn.addEventListener('click', async () => {
+    try{
+      showToast('Publishing…');
+      const bucket = cfg && cfg.bucket_name; if (!bucket) throw new Error('Missing bucket_name in config');
+      const putUrl = await getSignedPutUrl(bucket);
+      const html = editor ? (editor.value || editor.textContent || '') : '<!doctype html><html></html>';
+      const res = await fetch(putUrl, { method:'PUT', body: new Blob([html], {type:'text/html'}) });
+      if(!res.ok){ showToast('Publish failed: ' + res.status); return; }
+      setTimeout(()=>{ if(iframe){ iframe.src = 'app.html?ts=' + Date.now(); } showToast('Published!'); }, 600);
+    }catch(e){ showToast('Error: ' + (e && e.message ? e.message : e)); }
+  });
+})();
+</script></body></html>
 EOT
-  content_type    = "text/html"
 }
 
 resource "ibm_cos_bucket_object" "app" {
@@ -414,7 +375,6 @@ resource "ibm_cos_bucket_object" "app" {
 
     </style></head><body><div class="plex-container"><div class="plex-layer grid-layer"></div><div class="plex-layer h-lines-layer"></div><div class="plex-layer d-lines-layer"></div><div class="plex-layer scanline-layer"></div></div><div class="content"><div class="vibe-ide-title"><h1>Vibe IDE</h1></div><p class="status">SYSTEM STATUS: <span class="online">OPERATIONAL</span><span class="cursor">_</span></p></div></body></html>
 EOT
-  content_type    = "text/html"
 }
 
 resource "ibm_cos_bucket_object" "vibe_config" {
@@ -422,11 +382,11 @@ resource "ibm_cos_bucket_object" "vibe_config" {
   bucket_location = ibm_cos_bucket.vibe.region_location
   key             = "vibe-config.json"
   content         = jsonencode({
-    website_url        = "https://${ibm_cos_bucket.vibe.bucket_name}.${var.region}.cloud-object-storage.appdomain.cloud"
-    s3_put_url         = "https://s3.${var.region}.cloud-object-storage.appdomain.cloud/${ibm_cos_bucket.vibe.bucket_name}/app.html"
-    bucket_console_url = "https://cloud.ibm.com/objectstorage/buckets/${ibm_cos_bucket.vibe.bucket_name}?region=${var.region}"
+    website_url: "https://${ibm_cos_bucket.vibe.bucket_name}.us-south.cloud-object-storage.appdomain.cloud",
+    bucket_console_url: "https://cloud.ibm.com/objectstorage/buckets/${ibm_cos_bucket.vibe.bucket_name}?region=us-south",
+    sign_url: "https://vibe-manifest-broker.brendanandrewfitzpatrick.workers.dev/sign",
+    bucket_name: ibm_cos_bucket.vibe.bucket_name
   })
-  content_type    = "application/json"
 }
 
 resource "ibm_cos_bucket_object" "error" {
@@ -434,5 +394,21 @@ resource "ibm_cos_bucket_object" "error" {
   bucket_location = ibm_cos_bucket.vibe.region_location
   key             = "404.html"
   content         = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Not Found</title></head><body style='font-family: IBM Plex Sans, sans-serif; background:#000; color:#e5e7eb; text-align:center; padding-top:20vh;'><h1 style='font-size:3rem;'>404</h1><p>This vibe isn’t manifest yet.</p></body></html>"
-  content_type    = "text/html"
+}
+
+output "ide_url" {
+  value       = "https://${ibm_cos_bucket.vibe.bucket_name}.us-south.cloud-object-storage.appdomain.cloud/index.html"
+  description = "Open the Live IDE"
+}
+output "app_url" {
+  value       = "https://${ibm_cos_bucket.vibe.bucket_name}.us-south.cloud-object-storage.appdomain.cloud/app.html"
+  description = "Published app URL"
+}
+output "bucket_name" {
+  value       = ibm_cos_bucket.vibe.bucket_name
+  description = "COS bucket name"
+}
+output "bucket_console_url" {
+  value       = "https://cloud.ibm.com/objectstorage/buckets/${ibm_cos_bucket.vibe.bucket_name}?region=us-south"
+  description = "Bucket in console"
 }
