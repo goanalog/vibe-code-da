@@ -17,21 +17,37 @@ resource "random_id" "suffix" {
 }
 
 ###############################################################################
-# COS Service Instance + Bucket
+# COS Objects (upload static assets)
 ###############################################################################
-resource "ibm_resource_instance" "cos" {
-  name     = "vibe-cos-${random_id.suffix.hex}"
-  service  = "cloud-object-storage"
-  plan     = "lite"
-  location = "global"
+
+resource "ibm_cos_bucket_object" "index" {
+  bucket_crn    = ibm_cos_bucket.vibe.crn
+  bucket_region = ibm_cos_bucket.vibe.region_location
+  key           = "index.html"
+  file          = "index.html"
 }
 
-resource "ibm_cos_bucket" "vibe" {
-  bucket_name          = "vibe-bucket-${random_id.suffix.hex}"
-  resource_instance_id = ibm_resource_instance.cos.id
-  storage_class        = "standard"
-  force_delete         = true
+resource "ibm_cos_bucket_object" "app" {
+  bucket_crn    = ibm_cos_bucket.vibe.crn
+  bucket_region = ibm_cos_bucket.vibe.region_location
+  key           = "app.html"
+  file          = "app.html"
 }
+
+resource "ibm_cos_bucket_object" "config" {
+  bucket_crn    = ibm_cos_bucket.vibe.crn
+  bucket_region = ibm_cos_bucket.vibe.region_location
+  key           = "vibe-config.json"
+  file          = "vibe-config.json"
+}
+
+resource "ibm_cos_bucket_object" "error" {
+  bucket_crn    = ibm_cos_bucket.vibe.crn
+  bucket_region = ibm_cos_bucket.vibe.region_location
+  key           = "error.html"
+  content       = "<html><body><h1>Error loading Vibe</h1></body></html>"
+}
+
 
 ###############################################################################
 # Upload static app files to the bucket
