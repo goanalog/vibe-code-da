@@ -396,19 +396,3 @@ resource "ibm_cos_bucket_object" "error" {
   content         = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Not Found</title></head><body style='font-family: IBM Plex Sans, sans-serif; background:#000; color:#e5e7eb; text-align:center; padding-top:20vh;'><h1 style='font-size:3rem;'>404</h1><p>This vibe isn’t manifest yet.</p></body></html>"
 }
 
-output "ide_url" {
-  value       = "https://${ibm_cos_bucket.vibe.bucket_name}.us-south.cloud-object-storage.appdomain.cloud/index.html"
-  description = "Open the Live IDE"
-}
-output "app_url" {
-  value       = "https://${ibm_cos_bucket.vibe.bucket_name}.us-south.cloud-object-storage.appdomain.cloud/app.html"
-  description = "Published app URL"
-}
-output "bucket_name" {
-  value       = ibm_cos_bucket.vibe.bucket_name
-  description = "COS bucket name"
-}
-output "bucket_console_url" {
-  value       = "https://cloud.ibm.com/objectstorage/buckets/${ibm_cos_bucket.vibe.bucket_name}?region=us-south"
-  description = "Bucket in console"
-}
