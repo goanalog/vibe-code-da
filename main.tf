@@ -20,6 +20,30 @@ resource "random_id" "suffix" {
 # COS Objects (upload static assets)
 ###############################################################################
 
+# Create a unique public bucket for this deployment
+resource "random_id" "suffix" {
+  byte_length = 3
+}
+
+resource "ibm_cos_bucket" "vibe" {
+  bucket_name       = "vibe-bucket-${random_id.suffix.hex}"
+  resource_instance_id = ibm_resource_instance.cos.guid
+  storage_class      = "standard"
+  region_location    = var.region
+  force_delete       = true
+
+  website {
+    index_document = "index.html"
+    error_document = "error.html"
+  }
+}
+
+Public Access Policy
+resource "ibm_cos_bucket_public_access" "public" {
+  bucket_crn = ibm_cos_bucket.vibe.crn
+  access_type = "public"
+}
+
 resource "ibm_cos_bucket_object" "index" {
   bucket_crn    = ibm_cos_bucket.vibe.crn
   bucket_region = ibm_cos_bucket.vibe.region_location
