@@ -47,35 +47,3 @@ resource "ibm_cos_bucket_object" "error" {
   key           = "error.html"
   content       = "<html><body><h1>Error loading Vibe</h1></body></html>"
 }
-
-
-###############################################################################
-# Upload static app files to the bucket
-###############################################################################
-resource "ibm_cos_bucket_object" "index" {
-  bucket_crn      = ibm_cos_bucket.vibe.crn
-  bucket_location = ibm_cos_bucket.vibe.location
-  key             = "index.html"
-  file            = "index.html"
-}
-
-resource "ibm_cos_bucket_object" "app" {
-  bucket_crn      = ibm_cos_bucket.vibe.crn
-  bucket_location = ibm_cos_bucket.vibe.location
-  key             = "app.html"
-  file            = "app.html"
-}
-
-resource "ibm_cos_bucket_object" "config" {
-  bucket_crn      = ibm_cos_bucket.vibe.crn
-  bucket_location = ibm_cos_bucket.vibe.location
-  key             = "vibe-config.json"
-  file            = "vibe-config.json"
-}
-
-resource "ibm_cos_bucket_object" "error" {
-  bucket_crn      = ibm_cos_bucket.vibe.crn
-  bucket_location = ibm_cos_bucket.vibe.location
-  key             = "error.html"
-  content         = "<html><body><h1>Error loading Vibe</h1></body></html>"
-}
