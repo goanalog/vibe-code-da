@@ -1,6 +1,22 @@
 ###############################################################################
-# Vibe IDE — Deployable Architecture (v1.3.3)
+# Vibe IDE — Deployable Architecture (v1.3.4)
+# Compatible with IBM Provider v1.84.x (Schematics / Catalog)
 ###############################################################################
+
+terraform {
+  required_version = ">= 1.2.0, < 2.0.0"
+
+  required_providers {
+    ibm = {
+      source  = "ibm-cloud/ibm"
+      version = ">= 1.84.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.5.0"
+    }
+  }
+}
 
 provider "ibm" {}
 
@@ -12,55 +28,49 @@ resource "random_id" "suffix" {
 }
 
 ###############################################################################
-# COS Bucket and Public Access
+# COS Service Instance + Bucket
 ###############################################################################
+resource "ibm_resource_instance" "cos" {
+  name     = "vibe-cos-${random_id.suffix.hex}"
+  service  = "cloud-object-storage"
+  plan     = "lite"
+  location = "global"
+}
+
 resource "ibm_cos_bucket" "vibe" {
-  bucket_name   = "vibe-bucket-${random_id.suffix.hex}"
-  region        = var.region
-  storage_class = "standard"
-}
-
-resource "ibm_cos_bucket_website" "vibe" {
-  bucket          = ibm_cos_bucket.vibe.bucket_name
-  mainpage_suffix = "index.html"
-  error_key       = "error.html"
-}
-
-resource "ibm_cos_bucket_public_access" "vibe" {
-  bucket = ibm_cos_bucket.vibe.bucket_name
-
-  public_access {
-    object = true
-  }
+  bucket_name          = "vibe-bucket-${random_id.suffix.hex}"
+  resource_instance_id = ibm_resource_instance.cos.id
+  storage_class        = "standard"
+  force_delete         = true
 }
 
 ###############################################################################
-# Upload static app files
+# Upload static app files to the bucket
 ###############################################################################
 resource "ibm_cos_bucket_object" "index" {
-  bucket        = ibm_cos_bucket.vibe.bucket_name
-  key           = "index.html"
-  source        = "index.html"
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.location
+  key             = "index.html"
+  file            = "index.html"
 }
 
 resource "ibm_cos_bucket_object" "app" {
-  bucket        = ibm_cos_bucket.vibe.bucket_name
-  key           = "app.html"
-  source        = "app.html"
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.location
+  key             = "app.html"
+  file            = "app.html"
 }
 
-resource "ibm_cos_bucket_object" "vibe_config" {
-  bucket        = ibm_cos_bucket.vibe.bucket_name
-  key           = "vibe-config.json"
-  source        = "vibe-config.json"
+resource "ibm_cos_bucket_object" "config" {
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.location
+  key             = "vibe-config.json"
+  file            = "vibe-config.json"
 }
 
 resource "ibm_cos_bucket_object" "error" {
-  bucket        = ibm_cos_bucket.vibe.bucket_name
-  key           = "error.html"
-  content       = "<html><body><h1>Error loading Vibe</h1></body></html>"
+  bucket_crn      = ibm_cos_bucket.vibe.crn
+  bucket_location = ibm_cos_bucket.vibe.location
+  key             = "error.html"
+  content         = "<html><body><h1>Error loading Vibe</h1></body></html>"
 }
-
-###############################################################################
-# Outputs handled separately in outputs.tf
-###############################################################################
