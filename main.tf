@@ -3,22 +3,16 @@
 # Compatible with IBM Provider v1.84.x (Schematics / Catalog)
 ###############################################################################
 
-terraform {
-  required_version = ">= 1.2.0, < 2.0.0"
-
-  required_providers {
-    ibm = {
-      source  = "ibm-cloud/ibm"
-      version = ">= 1.84.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = ">= 3.5.0"
-    }
-  }
-}
+###############################################################################
+# Vibe IDE — Deployable Architecture (v1.3.4)
+###############################################################################
 
 provider "ibm" {}
+
+resource "random_id" "suffix" {
+  byte_length = 3
+}
+
 
 ###############################################################################
 # Random suffix for unique bucket names
