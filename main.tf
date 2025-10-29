@@ -2,21 +2,6 @@
 # Vibe IDE — Deployable Architecture (v1.3.3)
 ###############################################################################
 
-terraform {
-  required_providers {
-    ibm = {
-      source  = "ibm-cloud/ibm"
-      version = ">= 1.84.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = ">= 3.5.0"
-    }
-  }
-}
-
-provider "ibm" {}
-
 ###############################################################################
 # Random suffix for unique bucket names
 ###############################################################################
