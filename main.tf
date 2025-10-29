@@ -1,4 +1,3 @@
-
 provider "ibm" {}
 
 data "ibm_resource_group" "default" {
@@ -30,7 +29,7 @@ resource "ibm_cos_bucket" "vibe" {
   storage_class        = "standard"
 }
 
-# Configuration (CORS + S3 bucket policy) — supported in provider >=1.84
+# Provider 1.84: configuration includes CORS and S3 bucket policy
 resource "ibm_cos_bucket_configuration" "cfg" {
   bucket_crn      = ibm_cos_bucket.vibe.crn
   bucket_location = ibm_cos_bucket.vibe.region_location
@@ -42,6 +41,7 @@ resource "ibm_cos_bucket_configuration" "cfg" {
     max_age_seconds = 3000
   }
 
+  # A-1 demo policy: public read + anonymous PUT only for app.html
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -63,7 +63,7 @@ resource "ibm_cos_bucket_configuration" "cfg" {
   })
 }
 
-# Upload IDE and content (objects require CRN + location in 1.84)
+# Objects (must use bucket_crn + bucket_location)
 resource "ibm_cos_bucket_object" "index" {
   bucket_crn      = ibm_cos_bucket.vibe.crn
   bucket_location = ibm_cos_bucket.vibe.region_location

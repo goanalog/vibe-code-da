@@ -4,5 +4,12 @@ variable "region" {
   default     = "us-south"
 }
 
-variable "project_id" { type = string, default = "" }
-variable "config_id"  { type = string, default = "" }
+variable "project_id" {
+  type        = string
+  default     = ""
+}
+
+variable "config_id" {
+  type        = string
+  default     = ""
+}
